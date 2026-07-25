@@ -233,6 +233,57 @@ export function bestRunningRef(workouts) {
   return best ? { workout: best, vmaEst: bestScore } : null;
 }
 
+// ---------- Estimation de la FC max ----------
+// Croise les formules les plus validées (Tanaka 2001, Gellish 2007, Nes/HUNT 2013 —
+// la classique 220-âge de Fox est la moins précise et n'est PAS utilisée)
+// avec les données réelles : pic de FC observé dans les fichiers importés et
+// FC moyenne des courses (en compétition 30-90 min, FC moy ≈ 92-95 % de FCmax).
+export function estimateHrMax(workouts, birthYear) {
+  const age = birthYear ? new Date().getFullYear() - birthYear : null;
+  const formulas = age ? [
+    { name: 'Tanaka (2001)', detail: '208 − 0,7 × âge', value: Math.round(208 - 0.7 * age) },
+    { name: 'Gellish (2007)', detail: '207 − 0,7 × âge', value: Math.round(207 - 0.7 * age) },
+    { name: 'Nes / HUNT (2013)', detail: '211 − 0,64 × âge', value: Math.round(211 - 0.64 * age) },
+  ] : [];
+  const formulaAvg = formulas.length
+    ? Math.round(formulas.reduce((a, f) => a + f.value, 0) / formulas.length)
+    : null;
+
+  // pic réel enregistré (séries FC des imports Garmin)
+  let seriesMax = null, seriesRef = null;
+  // FC moyenne de course la plus haute → FCmax déduite (avg ≈ 93 % de max)
+  let raceDerived = null, raceRef = null;
+  for (const w of workouts) {
+    if (w.series?.hr?.length) {
+      const m = Math.max(...w.series.hr);
+      if (m > 100 && m < 230 && m > (seriesMax || 0)) { seriesMax = m; seriesRef = w; }
+    }
+    if (w.isRace && w.avgHr && w.durationMin >= 25 && w.durationMin <= 100) {
+      const est = Math.round(w.avgHr / 0.93);
+      if (est < 230 && est > (raceDerived || 0)) { raceDerived = est; raceRef = w; }
+    }
+  }
+
+  // synthèse : les mesures terrain sont des bornes basses de la vraie FCmax,
+  // on retient donc la plus haute des sources disponibles
+  const candidates = [
+    formulaAvg && { value: formulaAvg, source: 'formules (moyenne des 3)' },
+    seriesMax && { value: seriesMax, source: 'pic observé dans vos séances' },
+    raceDerived && { value: raceDerived, source: 'déduite de votre FC moyenne en course' },
+  ].filter(Boolean);
+  if (!candidates.length) return null;
+  const best = candidates.reduce((a, c) => c.value > a.value ? c : a);
+
+  return {
+    age, formulas, formulaAvg,
+    seriesMax, seriesRef,
+    raceDerived, raceRef,
+    best: best.value,
+    bestSource: best.source,
+    confidence: (seriesMax || raceDerived) ? 'bonne (données réelles à l\'appui)' : 'moyenne (formules seules, écart-type ±10 bpm)',
+  };
+}
+
 // Référence de performance unifiée pour TOUTES les projections.
 // Priorité : VMA du profil (test enregistré) > meilleure sortie détectée.
 export function perfReference(workouts, profile) {

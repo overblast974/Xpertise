@@ -1,5 +1,5 @@
 // Service worker : app shell en cache, fonctionnement 100 % hors-ligne.
-const CACHE = 'xpertise-v4';
+const CACHE = 'xpertise-v5';
 const ASSETS = [
   './',
   './index.html',

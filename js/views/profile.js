@@ -1,6 +1,7 @@
 // Écran profil : données athlète, sauvegarde/restauration, installation PWA.
 import { db } from '../db.js';
-import { esc, toast, confirmDlg } from '../ui.js';
+import { estimateHrMax } from '../metrics.js';
+import { esc, toast, confirmDlg, modal, infoBtn } from '../ui.js';
 
 export function renderProfile(root) {
   const { profile, workouts } = db.get();
@@ -15,7 +16,7 @@ export function renderProfile(root) {
           <label class="f">Année de naissance<input type="number" name="birthYear" min="1930" max="2015" value="${profile.birthYear || ''}" placeholder="1997"></label>
         </div>
         <div class="f-row">
-          <label class="f">FC max (bpm)<input type="number" name="hrMax" min="120" max="230" value="${profile.hrMax || ''}" required></label>
+          <label class="f"><span>FC max (bpm) ${infoBtn('hrmax')} <button type="button" class="h-act" id="btn-esthr" style="background:none;border:none;color:var(--accent-2);cursor:pointer;font-weight:700;font-size:11px">🧮 estimer</button></span><input type="number" name="hrMax" min="120" max="230" value="${profile.hrMax || ''}" required></label>
           <label class="f">FC repos (bpm)<input type="number" name="hrRest" min="30" max="100" value="${profile.hrRest || ''}" required></label>
         </div>
         <div class="f-row">
@@ -51,6 +52,20 @@ export function renderProfile(root) {
       <b>Les conseils fournis sont indicatifs et ne remplacent pas un avis médical.</b></p>
     </div>
   `;
+
+  root.querySelector('#btn-esthr').addEventListener('click', () => {
+    const form = root.querySelector('#prof-form');
+    const year = +form.birthYear.value || profile.birthYear;
+    const est = estimateHrMax(db.get().workouts, year);
+    if (!est) { toast('Renseignez d\'abord votre année de naissance (ou importez des séances avec cardio).'); return; }
+    const m = modal(`<h2>🧮 FC max estimée : ${est.best} bpm</h2>
+      ${est.formulas.map(f => `<p class="muted small row spread">${esc(f.name)} (${esc(f.detail)}) <b>${f.value} bpm</b></p>`).join('')}
+      ${est.seriesMax ? `<p class="muted small row spread">📈 Pic observé dans vos séances <b>${est.seriesMax} bpm</b></p>` : ''}
+      ${est.raceDerived ? `<p class="muted small row spread">🏁 Déduite de votre FC moy. en course <b>${est.raceDerived} bpm</b></p>` : ''}
+      <p class="muted small mt8">Source retenue : ${esc(est.bestSource)} · fiabilité ${esc(est.confidence)}. Détails dans la bulle ⓘ, et test de terrain recommandé (onglet Analyse → Tests).</p>
+      <div class="row mt12" style="justify-content:flex-end"><button class="btn sm" id="est-apply">Utiliser ${est.best} bpm</button></div>`);
+    m.el.querySelector('#est-apply').onclick = () => { form.hrMax.value = est.best; m.close(); toast('Pensez à Enregistrer le profil ✔'); };
+  });
 
   root.querySelector('#prof-form').addEventListener('submit', e => {
     e.preventDefault();

@@ -114,6 +114,16 @@ export const INFO = {
     body: `<p>Calculées depuis <b>votre</b> FCmax, VMA et FTP (onglet Profil). Chaque zone cible une adaptation physiologique différente : ne pas les mélanger, c'est tout l'art de l'entraînement.</p>
     <p class="mt8">L'essentiel : <b>Z1-Z2</b> = le socle (80 % du temps), <b>Z4</b> = le seuil (tempo contrôlé), <b>Z5</b> = la VMA/PMA (fractions courtes). La Z3 est utile en trail/vélo mais piégeuse en course sur route (zone grise).</p>`,
   },
+  hrmax: {
+    title: 'FC max — comment l\'estimer juste',
+    body: `<p>La formule classique <b>« 220 − âge »</b> (Fox, 1971) est la moins fiable de toutes : jamais validée pour prédire l'individu, erreur courante de ±10-20 bpm. Xpertise ne l'utilise pas.</p>
+    <p class="mt8">Les formules les mieux validées scientifiquement :<br>
+    • <b>Tanaka (2001)</b> : 208 − 0,7 × âge (méta-analyse, 18 712 sujets)<br>
+    • <b>Gellish (2007)</b> : 207 − 0,7 × âge (étude longitudinale)<br>
+    • <b>Nes / HUNT (2013)</b> : 211 − 0,64 × âge (3 320 adultes actifs)</p>
+    <p class="mt8">⚠️ Même les meilleures formules ont un écart-type de <b>±10 bpm</b> : elles donnent un point de départ, pas votre valeur. C'est pourquoi l'app les croise avec <b>vos données réelles</b> : le pic de FC enregistré dans vos séances importées et votre FC moyenne en course (≈ 93 % de la FCmax sur 30-90 min d'effort) sont des bornes basses de votre vraie FCmax — si elles dépassent les formules, ce sont elles qui font foi.</p>
+    <p class="mt8">🥇 La référence reste le <b>test de terrain</b> : échauffement + 3 × 3 min en côte d'intensité croissante, la dernière à fond — la FC au sommet ≈ FCmax.</p>`,
+  },
   dplus: {
     title: 'D+ hebdomadaire (trail)',
     body: `<p>En trail, le dénivelé est un volume d'entraînement à part entière. En phase spécifique, visez un <b>D+ hebdomadaire proche du D+ de votre course</b> (80-110 %).</p>

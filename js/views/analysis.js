@@ -1,7 +1,7 @@
 // Écran analyse : charge, polarisation, zones personnalisées, prédictions, niveau.
 import { db } from '../db.js';
 import { COACH } from '../knowledge/coaching.js';
-import { fmt, weeklyStats, perfReference, predictionTable, progressionTrend, acRatio, monotony, polarizationRatio, trailTime } from '../metrics.js';
+import { fmt, weeklyStats, perfReference, predictionTable, progressionTrend, acRatio, monotony, polarizationRatio, trailTime, estimateHrMax } from '../metrics.js';
 import { weeklyBars, donut } from '../charts.js';
 import { coachAdvice } from '../advice.js';
 import { esc, infoBtn, toast } from '../ui.js';
@@ -76,7 +76,7 @@ export function renderAnalysis(root) {
     <div class="section-title">Mes zones personnalisées ${infoBtn('zones')}</div>
     <div class="cards-2">
       <div class="card">
-        <h3>♥ Zones cardio (FCmax ${profile.hrMax})</h3>
+        <h3><span>♥ Zones cardio (FCmax ${profile.hrMax}) ${infoBtn('hrmax')}</span></h3>
         ${COACH.zones.heartRate.zones.map((z, i) => zoneRow(z, i, pctToBpm(z, profile))).join('')}
       </div>
       <div class="card">
@@ -120,6 +120,13 @@ export function renderAnalysis(root) {
           <div class="stat" style="justify-content:center"><span class="l">Résultat</span><span class="v" id="t-ftp-out" style="font-size:19px">—</span></div>
         </div>
         <button class="btn sm mt8" id="t-ftp-save" disabled>Enregistrer comme FTP</button>
+      </div>
+      <div class="card glow">
+        <h3><span>❤️ FC max — estimation multi-sources ${infoBtn('hrmax')}</span></h3>
+        <p class="muted small">Moyenne des 3 formules les plus validées (Tanaka, Gellish, Nes/HUNT — pas la « 220−âge », trop imprécise), croisée avec vos données réelles : pic de FC de vos séances importées et FC moyenne de vos courses.</p>
+        <label class="f mt12" style="max-width:220px">Année de naissance<input type="number" id="t-hrmax-year" min="1930" max="2015" value="${profile.birthYear || ''}" placeholder="1997"></label>
+        <div id="t-hrmax-out" class="mt12"></div>
+        <button class="btn sm mt8" id="t-hrmax-save" disabled>Enregistrer comme FC max</button>
       </div>
       <div class="card">
         <h3>📋 Autres protocoles fiables</h3>
@@ -181,6 +188,8 @@ function wireFieldTests(root) {
     },
     r => { db.setProfile({ vma: +r.vma.toFixed(1) }); toast(`VMA ${r.vma.toFixed(1)} km/h enregistrée ✔`); });
 
+  wireHrMaxEstimator(root);
+
   bind('t-ftp', 't-ftp-out', 't-ftp-save',
     w => {
       if (!w || w < 80 || w > 550) return null;
@@ -189,6 +198,51 @@ function wireFieldTests(root) {
       return { ftp, label: `${ftp} <small>W</small>${kg ? `<br><span class="muted small">${(ftp / kg).toFixed(1)} w/kg</span>` : ''}` };
     },
     r => { db.setProfile({ ftp: r.ftp }); toast(`FTP ${r.ftp} W enregistrée ✔`); });
+}
+
+// Estimateur FC max : formules validées + données réelles des séances
+function wireHrMaxEstimator(root) {
+  const yearInput = root.querySelector('#t-hrmax-year');
+  const out = root.querySelector('#t-hrmax-out');
+  const btn = root.querySelector('#t-hrmax-save');
+  if (!yearInput) return;
+  let est = null;
+
+  const render = () => {
+    const year = +yearInput.value || null;
+    const { workouts, profile } = db.get();
+    est = estimateHrMax(workouts, year && year > 1930 && year < 2016 ? year : null);
+    if (!est) {
+      out.innerHTML = '<p class="muted small">Renseignez votre année de naissance et/ou importez des séances avec cardio pour obtenir une estimation.</p>';
+      btn.disabled = true;
+      return;
+    }
+    const rows = [];
+    for (const f of est.formulas) rows.push(`<div class="row spread small" style="padding:4px 0;border-bottom:1px solid var(--line)"><span class="muted">${esc(f.name)} <span style="opacity:.6">(${esc(f.detail)})</span></span><b>${f.value} bpm</b></div>`);
+    if (est.formulaAvg) rows.push(`<div class="row spread small" style="padding:4px 0;border-bottom:1px solid var(--line)"><span class="muted">→ Moyenne des formules</span><b>${est.formulaAvg} bpm</b></div>`);
+    if (est.seriesMax) rows.push(`<div class="row spread small" style="padding:4px 0;border-bottom:1px solid var(--line)"><span class="muted">📈 Pic observé (${esc(est.seriesRef?.title || 'séance importée')})</span><b>${est.seriesMax} bpm</b></div>`);
+    if (est.raceDerived) rows.push(`<div class="row spread small" style="padding:4px 0;border-bottom:1px solid var(--line)"><span class="muted">🏁 Déduite de la FC moy. en course (÷ 0,93)</span><b>${est.raceDerived} bpm</b></div>`);
+    out.innerHTML = `${rows.join('')}
+      <div class="row spread mt12" style="align-items:center">
+        <span class="muted small">Meilleure estimation<br><span style="opacity:.7">source : ${esc(est.bestSource)} · fiabilité ${esc(est.confidence)}</span></span>
+        <span class="nutri-num" style="font-size:26px">${est.best} <span style="font-size:13px">bpm</span></span>
+      </div>`;
+    btn.disabled = false;
+    btn.textContent = `Enregistrer ${est.best} bpm comme FC max`;
+  };
+
+  yearInput.addEventListener('input', render);
+  render();
+
+  btn.addEventListener('click', () => {
+    if (!est) return;
+    const patch = { hrMax: est.best };
+    const year = +yearInput.value;
+    if (year > 1930 && year < 2016) patch.birthYear = year;
+    db.setProfile(patch);
+    toast(`FC max ${est.best} bpm enregistrée ✔ (zones recalculées)`);
+    window.dispatchEvent(new Event('xp:refresh'));
+  });
 }
 
 function acLabel(ac) {
