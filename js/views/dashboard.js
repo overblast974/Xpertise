@@ -27,7 +27,7 @@ export function renderDashboard(root, navigate) {
         <div class="card"><h3>📈 Suivi & analyse</h3><p class="muted">Charge d'entraînement (TRIMP), forme/fatigue (CTL·ATL·TSB), monotonie, polarisation 80/20 — les mêmes modèles que les structures pro.</p></div>
         <div class="card"><h3>🎯 Plan sur objectif</h3><p class="muted">Définissez une course (distance, D+, temps visé) : l'app périodise base → développement → spécifique → affûtage, avec décharges.</p></div>
         <div class="card"><h3>🥤 Nutrition d'effort</h3><p class="muted">Glucides/h, hydratation, sodium et caféine calculés selon durée, intensité, chaleur et votre poids (science Jeukendrup/Burke).</p></div>
-        <div class="card"><h3>⌚ Import Garmin</h3><p class="muted">Importez vos fichiers GPX/TCX exportés de Garmin Connect : durée, distance, D+ et FC sont extraits automatiquement.</p></div>
+        <div class="card"><h3>⌚ Import Garmin</h3><p class="muted">Importez vos fichiers FIT, GPX ou TCX exportés de Garmin Connect : durée, distance, D+ et FC sont extraits automatiquement.</p></div>
       </div>`;
     root.querySelector('#cta-add').onclick = () => openWorkoutForm();
     root.querySelector('#cta-profile').onclick = () => navigate('profile');

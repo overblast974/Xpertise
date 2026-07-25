@@ -1,4 +1,4 @@
-// Écran séances : liste, saisie manuelle, import Garmin (GPX/TCX), détail.
+// Écran séances : liste, saisie manuelle, import Garmin (FIT/TCX/GPX), détail.
 import { db } from '../db.js';
 import { fmt, workoutLoad, todayIso } from '../metrics.js';
 import { parseActivityFile } from '../parser.js';
@@ -29,7 +29,7 @@ export function renderWorkouts(root) {
   const renderList = (filter = 'all') => {
     const items = workouts.filter(w => filter === 'all' || w.sport === filter);
     if (!items.length) {
-      list.innerHTML = `<div class="empty"><span class="big">🏃</span>Aucune séance${filter !== 'all' ? ' dans cette catégorie' : ''}.<br>Ajoutez-en une à la main ou importez un fichier Garmin (GPX/TCX).</div>`;
+      list.innerHTML = `<div class="empty"><span class="big">🏃</span>Aucune séance${filter !== 'all' ? ' dans cette catégorie' : ''}.<br>Ajoutez-en une à la main ou importez un fichier Garmin (FIT/TCX/GPX).</div>`;
       return;
     }
     let lastMonth = '';
@@ -129,9 +129,9 @@ export function openWorkoutForm(existing = null) {
 function openImport() {
   const m = modal(`
     <h2>⌚ Import Garmin</h2>
-    <p class="muted">Depuis Garmin Connect : ouvrez l'activité → ⚙️ → <b>Exporter en GPX</b> ou <b>Exporter en TCX</b> (le TCX contient la fréquence cardiaque). Vous pouvez sélectionner plusieurs fichiers.</p>
-    <label class="f mt12">Fichiers GPX / TCX
-      <input type="file" id="imp-file" accept=".gpx,.tcx" multiple>
+    <p class="muted">Depuis Garmin Connect : ouvrez l'activité → ⚙️ → <b>Exporter l'original (FIT)</b>, <b>TCX</b> ou <b>GPX</b> — les trois formats sont acceptés. Vous pouvez sélectionner plusieurs fichiers (le .zip Garmin doit être décompressé d'abord).</p>
+    <label class="f mt12">Fichiers FIT / TCX / GPX
+      <input type="file" id="imp-file" accept=".gpx,.tcx,.fit" multiple>
     </label>
     <div id="imp-out" class="grid mt12"></div>
   `);

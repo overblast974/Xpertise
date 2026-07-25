@@ -14,7 +14,7 @@ PWA installable de suivi d'entraînement **course à pied / trail / vélo** : an
 
 ### ⏱ Séances
 - **Saisie manuelle** : sport, durée, distance, D+, FC moyenne, RPE, compétition
-- **Import Garmin** : fichiers **GPX / TCX** exportés de Garmin Connect (durée, distance, D+ lissé, FC et profil altimétrique extraits automatiquement, détection des doublons)
+- **Import Garmin** : fichiers **FIT / TCX / GPX** exportés de Garmin Connect (FIT natif décodé en pur JS ; durée, distance, D+ lissé, FC et profil altimétrique extraits automatiquement, détection des doublons)
 
 ### 📈 Analyse & extrapolation de perf
 - Charge TRIMP (Banister) ou session-RPE (Foster) hebdomadaire
@@ -56,7 +56,7 @@ js/
   app.js              routeur
   db.js               stockage local + export/restauration JSON
   metrics.js          TRIMP, CTL/ATL/TSB, Riegel, VMA, tendances
-  parser.js           import GPX/TCX Garmin
+  parser.js           import FIT/TCX/GPX Garmin
   charts.js           graphiques SVG sans dépendance
   plan.js             générateur de plan périodisé
   nutrition.js        calculateur nutrition d'effort
