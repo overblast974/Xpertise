@@ -2,7 +2,7 @@
 // S'appuie sur les règles de périodisation de la base de connaissances coach
 // (phases base/build/spécifique/affûtage, 80/20, décharge 1 sem/4, placement hebdo).
 import { COACH } from './knowledge/coaching.js';
-import { riegel, trailTime, estimateVmaFromPerf, bestRunningRef, weeklyStats, mondayOf, addDays, daysBetween, todayIso, fmt } from './metrics.js';
+import { riegel, trailTime, perfReference, weeklyStats, mondayOf, addDays, daysBetween, todayIso, fmt } from './metrics.js';
 
 const DAYS = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
 
@@ -232,7 +232,6 @@ export function generatePlan(goal, profile, workouts) {
 }
 
 export function predictGoalTime(goal, profile, workouts) {
-  const ref = bestRunningRef(workouts);
   if (goal.sport === 'bike') {
     if (!profile.ftp || !profile.weightKg) return null;
     const wkg = profile.ftp / profile.weightKg;
@@ -242,21 +241,18 @@ export function predictGoalTime(goal, profile, workouts) {
     const timeH = goal.distanceKm / flatKmh + climbH;
     return { timeMin: timeH * 60, basis: `FTP ${profile.ftp} W (${wkg.toFixed(1)} w/kg)` };
   }
+  const ref = perfReference(workouts, profile);
   if (!ref) return null;
   const k = goal.sport === 'trail'
     ? (goal.elevGain / Math.max(1, goal.distanceKm) > 35 ? 1.10 : 1.08)
     : 1.06;
-  const flat = riegel(ref.workout.durationMin, ref.workout.distanceKm, goal.distanceKm, k);
+  const flat = riegel(ref.refTimeMin, ref.refDistKm, goal.distanceKm, k);
   let timeMin = flat;
   if (goal.sport === 'trail' && goal.elevGain) {
-    const vma = ref.vmaEst;
-    const level = vma >= 19 ? 'elite' : vma >= 17 ? 'advanced' : vma >= 14.5 ? 'intermediate' : 'beginner';
+    const level = ref.vma >= 19 ? 'elite' : ref.vma >= 17 ? 'advanced' : ref.vma >= 14.5 ? 'intermediate' : 'beginner';
     timeMin = trailTime(flat, goal.distanceKm, goal.elevGain, level);
   }
-  return {
-    timeMin,
-    basis: `réf. ${fmt.km(ref.workout.distanceKm)} en ${fmt.dur(ref.workout.durationMin)} (VMA est. ${ref.vmaEst.toFixed(1)} km/h)`,
-  };
+  return { timeMin, basis: `réf. ${ref.basisLabel}` };
 }
 
 export const PHASE_LABEL = {

@@ -1,7 +1,7 @@
 // Écran analyse : charge, polarisation, zones personnalisées, prédictions, niveau.
 import { db } from '../db.js';
 import { COACH } from '../knowledge/coaching.js';
-import { fmt, weeklyStats, bestRunningRef, predictionTable, progressionTrend, acRatio, monotony, polarizationRatio, trailTime } from '../metrics.js';
+import { fmt, weeklyStats, perfReference, predictionTable, progressionTrend, acRatio, monotony, polarizationRatio, trailTime } from '../metrics.js';
 import { weeklyBars, donut } from '../charts.js';
 import { coachAdvice } from '../advice.js';
 import { esc, infoBtn, toast } from '../ui.js';
@@ -13,7 +13,7 @@ export function renderAnalysis(root) {
   const pol = polarizationRatio(workouts, profile);
   const ac = acRatio(workouts, profile);
   const mono = monotony(workouts, profile);
-  const ref = bestRunningRef(workouts);
+  const pref = perfReference(workouts, profile);
   const trend = progressionTrend(workouts);
   const { advice } = coachAdvice(state, 8);
 
@@ -56,17 +56,22 @@ export function renderAnalysis(root) {
       <div class="advice ${a.severity}"><span class="a-ico">${a.severity === 'bad' ? '🛑' : a.severity === 'warn' ? '⚠️' : a.severity === 'good' ? '✅' : '💡'}</span><span>${esc(a.message)}</span></div>`).join('')}</div>` : ''}
 
     <div class="section-title">Extrapolation de performance ${infoBtn('prediction')}</div>
-    ${ref ? `
+    ${pref ? `
     <div class="card glow">
-      <p class="muted">Référence : <b style="color:var(--txt)">${esc(ref.workout.title || 'séance')}</b> — ${fmt.km(ref.workout.distanceKm)} en ${fmt.dur(ref.workout.durationMin)} → VMA estimée <b style="color:var(--txt)">${ref.vmaEst.toFixed(1)} km/h</b> · VO2max ≈ <b style="color:var(--txt)">${Math.round(ref.vmaEst * 3.5)}</b> ml/min/kg${levelBadge(ref.vmaEst)} ${infoBtn('vma')}</p>
-      ${trend ? `<p class="muted mt8">Tendance sur 90 j (${trend.points} séances) ${infoBtn('trend')} : <b class="${trend.perMonth >= 0 ? 'up' : 'down'}">${trend.perMonth >= 0 ? '+' : ''}${trend.perMonth.toFixed(2)} km/h de VMA par mois</b> → dans 8 semaines : <b style="color:var(--txt)">${trend.in8Weeks.toFixed(1)} km/h</b></p>` : ''}
+      <p class="muted">${pref.source === 'profile'
+        ? `Référence : <b style="color:var(--txt)">VMA du profil ${pref.vma.toFixed(1)} km/h</b> <span class="badge good">test enregistré</span>`
+        : `Référence : <b style="color:var(--txt)">${esc(pref.workout?.title || 'meilleure sortie')}</b> — ${fmt.km(pref.refDistKm)} en ${fmt.dur(pref.refTimeMin)} → VMA estimée <b style="color:var(--txt)">${pref.vma.toFixed(1)} km/h</b>`}
+       · VO2max ≈ <b style="color:var(--txt)">${Math.round(pref.vma * 3.5)}</b> ml/min/kg${levelBadge(pref.vma)} ${infoBtn('vma')}</p>
+      ${pref.source === 'profile' && pref.workoutEst && Math.abs(pref.workoutEst - pref.vma) > 0.5
+        ? `<p class="muted mt8 small">ℹ️ Vos sorties récentes suggèrent ~${pref.workoutEst.toFixed(1)} km/h : ${pref.workoutEst > pref.vma ? 'vous valez peut-être mieux que votre dernier test — re-testez !' : 'l\'écart est normal, un test à fond reste la référence.'}</p>` : ''}
+      ${trend ? `<p class="muted mt8">Tendance sur 90 j (${trend.points} séances) ${infoBtn('trend')} : <b class="${trend.perMonth >= 0 ? 'up' : 'down'}">${trend.perMonth >= 0 ? '+' : ''}${trend.perMonth.toFixed(2)} km/h de VMA par mois</b> → dans 8 semaines : <b style="color:var(--txt)">${(pref.vma + trend.perMonth * 1.87).toFixed(1)} km/h</b></p>` : ''}
       <div class="tbl-wrap mt12"><table class="tbl">
         <tr><th>Distance</th><th>Temps prédit</th><th>Allure</th></tr>
-        ${predictionTable(ref.workout.distanceKm, ref.workout.durationMin).map(p =>
+        ${predictionTable(pref.refDistKm, pref.refTimeMin).map(p =>
           `<tr><td>${p.label}</td><td><b>${fmt.durSec(p.timeMin * 60)}</b></td><td>${fmt.pace(p.pace)}</td></tr>`).join('')}
       </table></div>
-      <p class="muted mt8 small">Modèle de Riegel (k = 1,06 route, majoré au-delà du marathon). En trail, comptez ${esc(dplusCost())} par 100 m de D+ selon votre niveau.</p>
-    </div>` : `<div class="card"><p class="muted">Ajoutez au moins une sortie route/plat ≥ 3 km soutenue (ou une course 🏁) pour activer l'extrapolation de performance.</p></div>`}
+      <p class="muted mt8 small">Modèle de Riegel (k = 1,06 route, majoré au-delà du marathon)${pref.source === 'profile' ? ', appliqué à un 10 km théorique déduit de votre VMA' : ''}. En trail, comptez ${esc(dplusCost())} par 100 m de D+ selon votre niveau.</p>
+    </div>` : `<div class="card"><p class="muted">Renseignez votre VMA (Tests de terrain ci-dessous ou Profil), ou ajoutez une sortie route/plat ≥ 3 km soutenue (ou une course 🏁) pour activer l'extrapolation.</p></div>`}
 
     <div class="section-title">Mes zones personnalisées ${infoBtn('zones')}</div>
     <div class="cards-2">
@@ -75,9 +80,9 @@ export function renderAnalysis(root) {
         ${COACH.zones.heartRate.zones.map((z, i) => zoneRow(z, i, pctToBpm(z, profile))).join('')}
       </div>
       <div class="card">
-        <h3>🏃 Zones d'allure ${profile.vma ? `(VMA ${profile.vma} km/h)` : ''}</h3>
-        ${profile.vma || ref
-          ? COACH.zones.runningPace.zones.map((z, i) => zoneRow(z, i, pctVmaToPace(z, profile.vma || ref.vmaEst))).join('')
+        <h3>🏃 Zones d'allure ${pref ? `(VMA ${pref.vma.toFixed(1)}${pref.source === 'profile' ? '' : ' est.'})` : ''}</h3>
+        ${pref
+          ? COACH.zones.runningPace.zones.map((z, i) => zoneRow(z, i, pctVmaToPace(z, pref.vma))).join('')
           : '<p class="muted">Renseignez votre VMA dans le profil (ou ajoutez une perf de référence).</p>'}
       </div>
       ${profile.ftp ? `<div class="card">
@@ -130,7 +135,7 @@ export function renderAnalysis(root) {
     <div class="card">
       <div class="tbl-wrap"><table class="tbl">
         <tr><th>Niveau</th><th>VMA (H)</th><th>Marathon</th><th>FTP w/kg (H)</th><th>V. ascensionnelle</th></tr>
-        ${levelGridRows(profile, ref)}
+        ${levelGridRows()}
       </table></div>
       <p class="muted mt8 small">${esc(COACH.levelGrids.verticalSpeed.commentFr || '')}</p>
     </div>

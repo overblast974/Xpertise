@@ -193,19 +193,28 @@ export function riegel(t1Min, d1Km, d2Km, k = 1.06) {
   return t1Min * Math.pow(d2Km / d1Km, k);
 }
 
+// % de VMA soutenable selon la durée d'effort (min)
+export function sustainablePct(tMin) {
+  if (tMin <= 6) return 1.0;
+  if (tMin <= 12) return 0.95;
+  if (tMin <= 30) return 0.92;
+  if (tMin <= 45) return 0.88;
+  if (tMin <= 75) return 0.85;
+  if (tMin <= 150) return 0.80;
+  return 0.75;
+}
+
 // VMA estimée depuis une perf (modèle % VMA soutenable selon durée)
 export function estimateVmaFromPerf(distanceKm, timeMin) {
   const speed = distanceKm / (timeMin / 60);
-  const t = timeMin;
-  let pct;
-  if (t <= 6) pct = 1.0;
-  else if (t <= 12) pct = 0.95;
-  else if (t <= 30) pct = 0.92;
-  else if (t <= 45) pct = 0.88;
-  else if (t <= 75) pct = 0.85;
-  else if (t <= 150) pct = 0.80;
-  else pct = 0.75;
-  return speed / pct;
+  return speed / sustainablePct(timeMin);
+}
+
+// Temps théorique sur une distance depuis la VMA (itératif : le %VMA dépend de la durée)
+export function timeFromVma(vma, distKm) {
+  let t = (distKm / (vma * 0.88)) * 60;
+  for (let i = 0; i < 8; i++) t = (distKm / (vma * sustainablePct(t))) * 60;
+  return t;
 }
 
 // Meilleure perf de référence : la course/sortie la plus "rapide" pondérée
@@ -222,6 +231,34 @@ export function bestRunningRef(workouts) {
     if (vma > bestScore && vma < 26) { bestScore = vma; best = w; }
   }
   return best ? { workout: best, vmaEst: bestScore } : null;
+}
+
+// Référence de performance unifiée pour TOUTES les projections.
+// Priorité : VMA du profil (test enregistré) > meilleure sortie détectée.
+export function perfReference(workouts, profile) {
+  const best = bestRunningRef(workouts);
+  if (profile?.vma) {
+    return {
+      vma: profile.vma,
+      source: 'profile',
+      basisLabel: `VMA ${profile.vma} km/h (test enregistré au profil)`,
+      refDistKm: 10,
+      refTimeMin: timeFromVma(profile.vma, 10),
+      workoutEst: best ? best.vmaEst : null, // pour comparaison profil vs sorties
+    };
+  }
+  if (best) {
+    return {
+      vma: best.vmaEst,
+      source: 'workout',
+      basisLabel: `${best.workout.distanceKm.toFixed(1)} km en ${fmt.dur(best.workout.durationMin)} (VMA estimée ${best.vmaEst.toFixed(1)} km/h)`,
+      refDistKm: best.workout.distanceKm,
+      refTimeMin: best.workout.durationMin,
+      workout: best.workout,
+      workoutEst: best.vmaEst,
+    };
+  }
+  return null;
 }
 
 // Table de prédictions route à partir d'une référence

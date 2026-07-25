@@ -1,6 +1,6 @@
 // Écran d'accueil : état de forme, charge, conseils du coach, prochaine séance, prédictions.
 import { db } from '../db.js';
-import { fmt, fitnessSeries, currentFitness, weeklyStats, bestRunningRef, predictionTable, progressionTrend, todayIso, daysBetween, mondayOf } from '../metrics.js';
+import { fmt, fitnessSeries, currentFitness, weeklyStats, perfReference, predictionTable, progressionTrend, todayIso, daysBetween, mondayOf } from '../metrics.js';
 import { fitnessChart, weeklyBars, tsbGauge, donut } from '../charts.js';
 import { coachAdvice, tsbLabel } from '../advice.js';
 import { esc, SPORT, infoBtn } from '../ui.js';
@@ -63,7 +63,7 @@ export function renderDashboard(root, navigate) {
     if (age >= 0 && age < 28) bySport[w.sport] = (bySport[w.sport] || 0) + (w.durationMin || 0);
   }
 
-  const ref = bestRunningRef(workouts);
+  const pref = perfReference(workouts, profile);
   const trend = progressionTrend(workouts);
   const daysToRace = goal?.date ? daysBetween(today, goal.date) : null;
 
@@ -146,16 +146,16 @@ export function renderDashboard(root, navigate) {
       </div>
       <div class="card">
         <h3><span>Projection de perf ${infoBtn('trend')}</span> ${trend ? '' : '<span class="badge">besoin de + de données</span>'}</h3>
-        ${ref ? `
-          <p class="muted">VMA estimée : <b style="color:var(--txt)">${ref.vmaEst.toFixed(1)} km/h</b> · VO2max ≈ <b style="color:var(--txt)">${Math.round(ref.vmaEst * 3.5)}</b> ml/min/kg ${infoBtn('vma')}</p>
-          ${trend ? `<p class="muted mt8">Tendance 90 j : <b class="${trend.perMonth >= 0 ? 'up' : 'down'}">${trend.perMonth >= 0 ? '+' : ''}${trend.perMonth.toFixed(2)} km/h par mois</b><br>
-            Extrapolation à 8 semaines : <b style="color:var(--txt)">${trend.in8Weeks.toFixed(1)} km/h</b></p>` : ''}
+        ${pref ? `
+          <p class="muted">VMA ${pref.source === 'profile' ? 'du profil (test)' : 'estimée de vos sorties'} : <b style="color:var(--txt)">${pref.vma.toFixed(1)} km/h</b> · VO2max ≈ <b style="color:var(--txt)">${Math.round(pref.vma * 3.5)}</b> ml/min/kg ${infoBtn('vma')}</p>
+          ${trend ? `<p class="muted mt8">Tendance 90 j (sorties) : <b class="${trend.perMonth >= 0 ? 'up' : 'down'}">${trend.perMonth >= 0 ? '+' : ''}${trend.perMonth.toFixed(2)} km/h par mois</b><br>
+            Extrapolation à 8 semaines : <b style="color:var(--txt)">${(pref.vma + trend.perMonth * 1.87).toFixed(1)} km/h</b></p>` : ''}
           <div class="tbl-wrap mt12"><table class="tbl">
             <tr><th>Distance</th><th>Temps prédit</th><th>Allure</th></tr>
-            ${predictionTable(ref.workout.distanceKm, ref.workout.durationMin).slice(0, 4).map(p =>
+            ${predictionTable(pref.refDistKm, pref.refTimeMin).slice(0, 4).map(p =>
               `<tr><td>${p.label}</td><td><b>${fmt.durSec(p.timeMin * 60)}</b></td><td>${fmt.pace(p.pace)}</td></tr>`).join('')}
           </table></div>` :
-          `<p class="muted">Ajoutez une course ou une sortie soutenue ≥ 3 km sur terrain plat pour débloquer les prédictions (Riegel + VMA).</p>`}
+          `<p class="muted">Renseignez votre VMA (Profil ou Tests de terrain de l'onglet Analyse), ou ajoutez une sortie soutenue ≥ 3 km sur plat pour débloquer les prédictions.</p>`}
       </div>
     </div>
 
