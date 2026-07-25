@@ -4,7 +4,7 @@ import { COACH } from '../knowledge/coaching.js';
 import { fmt, weeklyStats, bestRunningRef, predictionTable, progressionTrend, acRatio, monotony, polarizationRatio, trailTime } from '../metrics.js';
 import { weeklyBars, donut } from '../charts.js';
 import { coachAdvice } from '../advice.js';
-import { esc } from '../ui.js';
+import { esc, infoBtn, toast } from '../ui.js';
 
 export function renderAnalysis(root) {
   const state = db.get();
@@ -22,20 +22,20 @@ export function renderAnalysis(root) {
 
     <div class="cards-3">
       <div class="card">
-        <div class="stat"><span class="l">Ratio charge aiguë:chronique</span>
+        <div class="stat"><span class="l">Ratio charge aiguë:chronique${infoBtn('acwr')}</span>
         <span class="v">${ac ?? '—'}</span>
         <span class="d">${acLabel(ac)}</span></div>
         <div class="meter mt8"><i style="width:${ac ? Math.min(100, ac / 2 * 100) : 0}%"></i></div>
         <p class="muted mt8 small">Zone sûre : 0,8 – 1,3. Au-delà de 1,5 : risque de blessure nettement accru.</p>
       </div>
       <div class="card">
-        <div class="stat"><span class="l">Monotonie (Foster)</span>
+        <div class="stat"><span class="l">Monotonie (Foster)${infoBtn('monotony')}</span>
         <span class="v">${mono ?? '—'}</span>
         <span class="d">${monoLabel(mono)}</span></div>
         <p class="muted mt8 small">&lt; 1,5 : bonne variété. &gt; 2 : trop de jours identiques — alternez dur/facile et gardez un vrai jour de repos.</p>
       </div>
       <div class="card">
-        <div class="stat"><span class="l">Polarisation (28 j)</span>
+        <div class="stat"><span class="l">Polarisation (28 j)${infoBtn('polarization')}</span>
         <span class="v">${pol == null ? '—' : Math.round(pol * 100) + '<small>% facile</small>'}</span>
         <span class="d">${polLabel(pol)}</span></div>
         <div class="meter mt8"><i style="width:${pol == null ? 0 : pol * 100}%"></i></div>
@@ -43,23 +43,23 @@ export function renderAnalysis(root) {
       </div>
     </div>
 
-    <div class="section-title">Charge hebdomadaire (TRIMP)</div>
+    <div class="section-title">Charge hebdomadaire (TRIMP) ${infoBtn('weekload')}</div>
     <div class="card"><div class="chart-wrap">${weeklyBars(weeks, 'load', { color: '#7c5cff' })}</div></div>
 
     <div class="cards-2 mt12">
       <div class="card"><h3>Distance / semaine</h3><div class="chart-wrap">${weeklyBars(weeks.slice(-8), 'distanceKm', { color: '#22d3ee', unit: ' km' })}</div></div>
-      <div class="card"><h3>D+ / semaine</h3><div class="chart-wrap">${weeklyBars(weeks.slice(-8), 'elevGain', { color: '#a3e635', unit: ' m' })}</div></div>
+      <div class="card"><h3><span>D+ / semaine${infoBtn('dplus')}</span></h3><div class="chart-wrap">${weeklyBars(weeks.slice(-8), 'elevGain', { color: '#a3e635', unit: ' m' })}</div></div>
     </div>
 
     ${advice.length ? `<div class="section-title">Lecture du coach</div>
     <div class="grid">${advice.map(a => `
       <div class="advice ${a.severity}"><span class="a-ico">${a.severity === 'bad' ? '🛑' : a.severity === 'warn' ? '⚠️' : a.severity === 'good' ? '✅' : '💡'}</span><span>${esc(a.message)}</span></div>`).join('')}</div>` : ''}
 
-    <div class="section-title">Extrapolation de performance</div>
+    <div class="section-title">Extrapolation de performance ${infoBtn('prediction')}</div>
     ${ref ? `
     <div class="card glow">
-      <p class="muted">Référence : <b style="color:var(--txt)">${esc(ref.workout.title || 'séance')}</b> — ${fmt.km(ref.workout.distanceKm)} en ${fmt.dur(ref.workout.durationMin)} → VMA estimée <b style="color:var(--txt)">${ref.vmaEst.toFixed(1)} km/h</b>${levelBadge(ref.vmaEst)}</p>
-      ${trend ? `<p class="muted mt8">Tendance sur 90 j (${trend.points} séances) : <b class="${trend.perMonth >= 0 ? 'up' : 'down'}">${trend.perMonth >= 0 ? '+' : ''}${trend.perMonth.toFixed(2)} km/h de VMA par mois</b> → dans 8 semaines : <b style="color:var(--txt)">${trend.in8Weeks.toFixed(1)} km/h</b></p>` : ''}
+      <p class="muted">Référence : <b style="color:var(--txt)">${esc(ref.workout.title || 'séance')}</b> — ${fmt.km(ref.workout.distanceKm)} en ${fmt.dur(ref.workout.durationMin)} → VMA estimée <b style="color:var(--txt)">${ref.vmaEst.toFixed(1)} km/h</b> · VO2max ≈ <b style="color:var(--txt)">${Math.round(ref.vmaEst * 3.5)}</b> ml/min/kg${levelBadge(ref.vmaEst)} ${infoBtn('vma')}</p>
+      ${trend ? `<p class="muted mt8">Tendance sur 90 j (${trend.points} séances) ${infoBtn('trend')} : <b class="${trend.perMonth >= 0 ? 'up' : 'down'}">${trend.perMonth >= 0 ? '+' : ''}${trend.perMonth.toFixed(2)} km/h de VMA par mois</b> → dans 8 semaines : <b style="color:var(--txt)">${trend.in8Weeks.toFixed(1)} km/h</b></p>` : ''}
       <div class="tbl-wrap mt12"><table class="tbl">
         <tr><th>Distance</th><th>Temps prédit</th><th>Allure</th></tr>
         ${predictionTable(ref.workout.distanceKm, ref.workout.durationMin).map(p =>
@@ -68,7 +68,7 @@ export function renderAnalysis(root) {
       <p class="muted mt8 small">Modèle de Riegel (k = 1,06 route, majoré au-delà du marathon). En trail, comptez ${esc(dplusCost())} par 100 m de D+ selon votre niveau.</p>
     </div>` : `<div class="card"><p class="muted">Ajoutez au moins une sortie route/plat ≥ 3 km soutenue (ou une course 🏁) pour activer l'extrapolation de performance.</p></div>`}
 
-    <div class="section-title">Mes zones personnalisées</div>
+    <div class="section-title">Mes zones personnalisées ${infoBtn('zones')}</div>
     <div class="cards-2">
       <div class="card">
         <h3>♥ Zones cardio (FCmax ${profile.hrMax})</h3>
@@ -86,6 +86,46 @@ export function renderAnalysis(root) {
       </div>` : ''}
     </div>
 
+    <div class="section-title">🧪 Tests de terrain ${infoBtn('vma')}</div>
+    <p class="muted" style="margin:0 2px 10px">Les estimations automatiques sont pratiques, mais rien ne remplace un vrai test. Faites-les reposé (TSB &gt; 0), échauffé 15-20 min, sur terrain plat ou piste, sans vent fort. Re-testez toutes les 6-8 semaines pour objectiver la progression.</p>
+    <div class="cards-2">
+      <div class="card glow">
+        <h3>🏃 Demi-Cooper (6 min) — le + simple</h3>
+        <p class="muted small">Courez la <b>plus grande distance possible en 6 minutes</b>, départ lancé, allure régulière (piste ou GPS). VMA = distance (m) ÷ 100.</p>
+        <div class="f-row mt12">
+          <label class="f">Distance en 6 min (m)<input type="number" id="t-halfcooper" min="600" max="2600" placeholder="1600"></label>
+          <div class="stat" style="justify-content:center"><span class="l">Résultat</span><span class="v" id="t-halfcooper-out" style="font-size:19px">—</span></div>
+        </div>
+        <button class="btn sm mt8" id="t-halfcooper-save" disabled>Enregistrer comme VMA</button>
+      </div>
+      <div class="card">
+        <h3>🏃 Cooper (12 min) — VO2max</h3>
+        <p class="muted small">Plus grande distance possible en <b>12 minutes</b>. VO2max = (distance − 505) ÷ 44,7 (formule de Cooper). Plus dur mentalement mais bon reflet de l'endurance aérobie.</p>
+        <div class="f-row mt12">
+          <label class="f">Distance en 12 min (m)<input type="number" id="t-cooper" min="1200" max="5200" placeholder="3000"></label>
+          <div class="stat" style="justify-content:center"><span class="l">Résultat</span><span class="v" id="t-cooper-out" style="font-size:19px">—</span></div>
+        </div>
+        <button class="btn sm mt8" id="t-cooper-save" disabled>Enregistrer comme VMA</button>
+      </div>
+      <div class="card">
+        <h3>🚴 FTP — test 20 minutes</h3>
+        <p class="muted small">Après échauffement + 5 min à fond pour "vider" l'anaérobie : <b>20 min au maximum soutenable régulier</b>. FTP = puissance moyenne × 0,95.</p>
+        <div class="f-row mt12">
+          <label class="f">Puissance moy. 20 min (W)<input type="number" id="t-ftp" min="80" max="550" placeholder="250"></label>
+          <div class="stat" style="justify-content:center"><span class="l">Résultat</span><span class="v" id="t-ftp-out" style="font-size:19px">—</span></div>
+        </div>
+        <button class="btn sm mt8" id="t-ftp-save" disabled>Enregistrer comme FTP</button>
+      </div>
+      <div class="card">
+        <h3>📋 Autres protocoles fiables</h3>
+        <p class="muted small">
+        <b>Vameval</b> (piste, plots tous les 20 m, +0,5 km/h/min) : le test de référence des clubs — la vitesse du dernier palier complété = VMA.<br><br>
+        <b>Test 5 min à fond</b> (GPS) : vitesse moyenne ≈ 95-100 % de la VMA.<br><br>
+        <b>FCmax</b> : après échauffement, 3 × 3 min en côte à intensité croissante, la dernière à fond — la FC en haut de la 3ᵉ ≈ FCmax. Mettez-la à jour dans le Profil, toutes vos zones en dépendent.<br><br>
+        <b>Vitesse ascensionnelle</b> (trail) : montée régulière de 20-30 min à fond contrôlé → D+ ÷ temps (m/h), à comparer à la grille ci-dessous.</p>
+      </div>
+    </div>
+
     <div class="section-title">Grilles de niveau</div>
     <div class="card">
       <div class="tbl-wrap"><table class="tbl">
@@ -95,6 +135,55 @@ export function renderAnalysis(root) {
       <p class="muted mt8 small">${esc(COACH.levelGrids.verticalSpeed.commentFr || '')}</p>
     </div>
   `;
+
+  wireFieldTests(root);
+}
+
+// Calculateurs des tests de terrain : résultat en direct + enregistrement au profil
+function wireFieldTests(root) {
+  const bind = (inputId, outId, saveId, compute, save) => {
+    const input = root.querySelector('#' + inputId);
+    const out = root.querySelector('#' + outId);
+    const btn = root.querySelector('#' + saveId);
+    if (!input) return;
+    let result = null;
+    input.addEventListener('input', () => {
+      result = compute(+input.value);
+      out.innerHTML = result ? result.label : '—';
+      btn.disabled = !result;
+    });
+    btn.addEventListener('click', () => {
+      if (!result) return;
+      save(result);
+      window.dispatchEvent(new Event('xp:refresh'));
+    });
+  };
+
+  bind('t-halfcooper', 't-halfcooper-out', 't-halfcooper-save',
+    m => {
+      if (!m || m < 600 || m > 2600) return null;
+      const vma = m / 100;
+      return { vma, label: `${vma.toFixed(1)} <small>km/h</small><br><span class="muted small">VO2max ≈ ${Math.round(vma * 3.5)} ml/min/kg</span>` };
+    },
+    r => { db.setProfile({ vma: +r.vma.toFixed(1) }); toast(`VMA ${r.vma.toFixed(1)} km/h enregistrée ✔`); });
+
+  bind('t-cooper', 't-cooper-out', 't-cooper-save',
+    m => {
+      if (!m || m < 1200 || m > 5200) return null;
+      const vo2 = (m - 504.9) / 44.73;
+      const vma = vo2 / 3.5;
+      return { vma, label: `VO2max ${Math.round(vo2)}<br><span class="muted small">VMA ≈ ${vma.toFixed(1)} km/h</span>` };
+    },
+    r => { db.setProfile({ vma: +r.vma.toFixed(1) }); toast(`VMA ${r.vma.toFixed(1)} km/h enregistrée ✔`); });
+
+  bind('t-ftp', 't-ftp-out', 't-ftp-save',
+    w => {
+      if (!w || w < 80 || w > 550) return null;
+      const ftp = Math.round(w * 0.95);
+      const kg = db.get().profile.weightKg;
+      return { ftp, label: `${ftp} <small>W</small>${kg ? `<br><span class="muted small">${(ftp / kg).toFixed(1)} w/kg</span>` : ''}` };
+    },
+    r => { db.setProfile({ ftp: r.ftp }); toast(`FTP ${r.ftp} W enregistrée ✔`); });
 }
 
 function acLabel(ac) {

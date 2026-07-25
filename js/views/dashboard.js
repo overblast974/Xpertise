@@ -3,7 +3,7 @@ import { db } from '../db.js';
 import { fmt, fitnessSeries, currentFitness, weeklyStats, bestRunningRef, predictionTable, progressionTrend, todayIso, daysBetween, mondayOf } from '../metrics.js';
 import { fitnessChart, weeklyBars, tsbGauge, donut } from '../charts.js';
 import { coachAdvice, tsbLabel } from '../advice.js';
-import { esc, SPORT } from '../ui.js';
+import { esc, SPORT, infoBtn } from '../ui.js';
 import { openWorkoutForm } from './workouts.js';
 
 export function renderDashboard(root, navigate) {
@@ -70,24 +70,24 @@ export function renderDashboard(root, navigate) {
   root.innerHTML = `
     <div class="hero">
       <div class="hello">${greeting()}${profile.name ? ' ' + esc(profile.name) : ''} · ${new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}</div>
-      <div class="hero-line">Forme : <b>${tsb.label}</b> <span class="badge ${tsb.cls}" style="vertical-align:middle">TSB ${fit.tsb > 0 ? '+' : ''}${fit.tsb}</span></div>
+      <div class="hero-line">Forme : <b>${tsb.label}</b> <span class="badge ${tsb.cls}" style="vertical-align:middle">TSB ${fit.tsb > 0 ? '+' : ''}${fit.tsb}</span>${infoBtn('tsb')}</div>
       <div class="hero-note">${esc(tsb.text)}</div>
       ${daysToRace != null && daysToRace >= 0 ? `<div class="row mt12"><span class="badge accent">🏁 Objectif dans ${daysToRace} j — ${esc(goalLabel(goal))}</span></div>` : ''}
     </div>
 
     <div class="cards-3 mt12">
       <div class="card"><div class="stat">
-        <span class="l">Fitness (CTL)</span>
+        <span class="l">Fitness (CTL)${infoBtn('ctl')}</span>
         <span class="v">${fit.ctl}</span>
         <span class="d ${fit.ctlDelta7 > 0.5 ? 'up' : fit.ctlDelta7 < -0.5 ? 'down' : 'flat'}">${fit.ctlDelta7 > 0 ? '▲' : fit.ctlDelta7 < 0 ? '▼' : '•'} ${Math.abs(fit.ctlDelta7)} sur 7 j</span>
       </div></div>
       <div class="card"><div class="stat">
-        <span class="l">Fatigue (ATL)</span>
+        <span class="l">Fatigue (ATL)${infoBtn('atl')}</span>
         <span class="v">${fit.atl}</span>
         <span class="d flat">charge aiguë 7 j</span>
       </div></div>
       <div class="card"><div class="stat">
-        <span class="l">Cette semaine</span>
+        <span class="l">Cette semaine${infoBtn('weekload')}</span>
         <span class="v">${fmt.dur(thisWeek?.durationMin || 0)}</span>
         <span class="d flat">${thisWeek?.count || 0} séance${(thisWeek?.count || 0) > 1 ? 's' : ''} · ${Math.round(thisWeek?.distanceKm || 0)} km · ${Math.round(thisWeek?.elevGain || 0)} m D+</span>
       </div></div>
@@ -113,7 +113,7 @@ export function renderDashboard(root, navigate) {
       </div>
     </div>` : ''}
 
-    <div class="section-title">Forme sur 90 jours</div>
+    <div class="section-title">Forme sur 90 jours ${infoBtn('tsb')}</div>
     <div class="card">
       <div class="chart-wrap">${fitnessChart(series)}</div>
       <div class="chart-legend">
@@ -124,7 +124,7 @@ export function renderDashboard(root, navigate) {
       <div class="row mt12" style="justify-content:center">${tsbGauge(fit.tsb)}</div>
     </div>
 
-    <div class="section-title">Volume hebdomadaire</div>
+    <div class="section-title">Volume hebdomadaire ${infoBtn('weekload')}</div>
     <div class="card">
       <div class="chart-wrap">${weeklyBars(weeks, 'durationMin', { color: '#22d3ee' })}</div>
       ${lastWeek ? `<p class="muted mt8">${volumeComment(thisWeek, lastWeek)}</p>` : ''}
@@ -145,9 +145,9 @@ export function renderDashboard(root, navigate) {
         </div>
       </div>
       <div class="card">
-        <h3>Projection de perf ${trend ? '' : '<span class="badge">besoin de + de données</span>'}</h3>
+        <h3><span>Projection de perf ${infoBtn('trend')}</span> ${trend ? '' : '<span class="badge">besoin de + de données</span>'}</h3>
         ${ref ? `
-          <p class="muted">VMA estimée : <b style="color:var(--txt)">${ref.vmaEst.toFixed(1)} km/h</b></p>
+          <p class="muted">VMA estimée : <b style="color:var(--txt)">${ref.vmaEst.toFixed(1)} km/h</b> · VO2max ≈ <b style="color:var(--txt)">${Math.round(ref.vmaEst * 3.5)}</b> ml/min/kg ${infoBtn('vma')}</p>
           ${trend ? `<p class="muted mt8">Tendance 90 j : <b class="${trend.perMonth >= 0 ? 'up' : 'down'}">${trend.perMonth >= 0 ? '+' : ''}${trend.perMonth.toFixed(2)} km/h par mois</b><br>
             Extrapolation à 8 semaines : <b style="color:var(--txt)">${trend.in8Weeks.toFixed(1)} km/h</b></p>` : ''}
           <div class="tbl-wrap mt12"><table class="tbl">

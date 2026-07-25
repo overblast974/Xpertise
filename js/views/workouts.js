@@ -137,25 +137,60 @@ function openImport() {
   `);
   m.el.querySelector('#imp-file').addEventListener('change', async e => {
     const out = m.el.querySelector('#imp-out');
-    out.innerHTML = '';
-    let ok = 0;
+    out.innerHTML = '<p class="muted">Analyse des fichiers…</p>';
+    const imported = [], skipped = [], failed = [];
     for (const file of e.target.files) {
       try {
         const parsed = await parseActivityFile(file);
         const dup = db.get().workouts.find(w => w.date === parsed.date && Math.abs((w.durationMin || 0) - parsed.durationMin) < 2 && Math.abs((w.distanceKm || 0) - parsed.distanceKm) < 0.3);
-        if (dup) {
-          out.innerHTML += `<div class="advice warn"><span class="a-ico">⚠️</span><span><b>${esc(file.name)}</b> : doublon probable (déjà une séance le ${fmt.date(parsed.date)}) — ignoré.</span></div>`;
-          continue;
-        }
+        if (dup) { skipped.push({ file: file.name, parsed }); continue; }
         db.addWorkout(parsed);
-        ok++;
-        out.innerHTML += `<div class="advice good"><span class="a-ico">✅</span><span><b>${esc(parsed.title)}</b> — ${fmt.date(parsed.date)} · ${fmt.km(parsed.distanceKm)} · ${fmt.dur(parsed.durationMin)} · ${parsed.elevGain} m D+${parsed.avgHr ? ' · ♥ ' + parsed.avgHr : ''}</span></div>`;
+        imported.push(parsed);
       } catch (err) {
-        out.innerHTML += `<div class="advice bad"><span class="a-ico">🛑</span><span><b>${esc(file.name)}</b> : ${esc(err.message)}</span></div>`;
+        failed.push({ file: file.name, message: err.message });
       }
     }
-    if (ok) { toast(`${ok} séance${ok > 1 ? 's' : ''} importée${ok > 1 ? 's' : ''} ✔`); window.dispatchEvent(new Event('xp:refresh')); }
+    m.close();
+    openImportResult(imported, skipped, failed);
+    if (imported.length) window.dispatchEvent(new Event('xp:refresh'));
   });
+}
+
+// Fenêtre de validation après import : confirme ce qui a été enregistré
+function openImportResult(imported, skipped, failed) {
+  const ok = imported.length > 0;
+  const allOk = ok && !skipped.length && !failed.length;
+  const title = allOk
+    ? (imported.length > 1 ? `✅ ${imported.length} séances importées avec succès` : '✅ Séance importée avec succès')
+    : ok ? '✅ Import terminé' : failed.length ? '❌ Import impossible' : '⚠️ Rien à importer';
+
+  const woLine = w => {
+    const sp = SPORT[w.sport] || SPORT.run;
+    return `<div class="wo-item" style="cursor:default">
+      <div class="wo-ico ${sp.cls}">${sp.ico}</div>
+      <div class="wo-main">
+        <div class="wo-title">${esc(w.title)}</div>
+        <div class="wo-meta">${sp.label} · ${fmt.date(w.date)}${w.avgHr ? ' · ♥ ' + w.avgHr + ' bpm' : ''}</div>
+      </div>
+      <div class="wo-right"><b>${fmt.km(w.distanceKm)}</b>${fmt.dur(w.durationMin)}${w.elevGain ? ' · ' + w.elevGain + ' m D+' : ''}</div>
+    </div>`;
+  };
+
+  const m = modal(`
+    <h2>${title}</h2>
+    ${ok ? `<p class="muted">Les données suivantes ont été enregistrées et sont prises en compte dans votre suivi (charge, forme, prédictions) :</p>
+      <div class="grid mt12">${imported.map(woLine).join('')}</div>` : ''}
+    ${skipped.length ? `<div class="grid mt12">${skipped.map(s =>
+      `<div class="advice warn"><span class="a-ico">⚠️</span><span><b>${esc(s.file)}</b> : doublon ignoré — une séance quasi identique existe déjà le ${fmt.date(s.parsed.date)}.</span></div>`).join('')}</div>` : ''}
+    ${failed.length ? `<div class="grid mt12">${failed.map(f =>
+      `<div class="advice bad"><span class="a-ico">🛑</span><span><b>${esc(f.file)}</b> : ${esc(f.message)}</span></div>`).join('')}</div>` : ''}
+    <div class="row mt16" style="justify-content:flex-end">
+      ${failed.length || skipped.length ? '<button class="btn ghost sm" data-a="retry">Réessayer</button>' : ''}
+      <button class="btn" data-a="ok">${ok ? 'Parfait 👍' : 'Fermer'}</button>
+    </div>
+  `);
+  m.el.querySelector('[data-a=ok]').onclick = () => m.close();
+  m.el.querySelector('[data-a=retry]')?.addEventListener('click', () => { m.close(); openImport(); });
 }
 
 // ---------- Détail ----------

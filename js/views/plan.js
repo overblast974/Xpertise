@@ -2,7 +2,7 @@
 import { db } from '../db.js';
 import { fmt, todayIso, addDays, daysBetween } from '../metrics.js';
 import { generatePlan, PHASE_LABEL } from '../plan.js';
-import { esc, SPORT, modal, toast, confirmDlg, bindSeg } from '../ui.js';
+import { esc, SPORT, modal, toast, confirmDlg, bindSeg, infoBtn } from '../ui.js';
 
 export function renderPlan(root) {
   const { goal, plan, profile, workouts } = db.get();
@@ -39,7 +39,7 @@ export function renderPlan(root) {
       <div class="hero-note">
         ${fmt.date(goal.date)} — ${daysToRace >= 0 ? `dans <b>${daysToRace} jours</b>` : 'passé'} ·
         plan de ${plan.nWeeks} semaines
-        ${plan.prediction ? `<br>⚡ Temps extrapolé de vos données : <b>${fmt.durSec(plan.prediction.timeMin * 60)}</b> <span class="small">(${esc(plan.prediction.basis)})</span>` : ''}
+        ${plan.prediction ? `<br>⚡ Temps extrapolé de vos données : <b>${fmt.durSec(plan.prediction.timeMin * 60)}</b> <span class="small">(${esc(plan.prediction.basis)})</span> ${infoBtn('prediction')}` : ''}
       </div>
       <div class="phase-bar mt12">
         <i class="ph-base" style="width:${pc.base / plan.nWeeks * 100}%"></i>
