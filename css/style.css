@@ -212,6 +212,9 @@ body {
 .wo-ico.run { background: rgba(255, 107, 74, .14); }
 .wo-ico.bike { background: rgba(56, 189, 248, .14); }
 .wo-ico.trail { background: rgba(163, 230, 53, .14); }
+.wo-ico.rest { background: rgba(96, 165, 250, .12); }
+.wo-item.rest-item { opacity: .8; background: var(--bg-soft); }
+.badge.rest { color: #93c5fd; border-color: rgba(96, 165, 250, .4); background: rgba(96, 165, 250, .08); }
 .wo-main { flex: 1; min-width: 0; }
 .wo-title { font-weight: 700; font-size: 14.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .wo-meta { font-size: 12px; color: var(--txt-2); margin-top: 2px; }

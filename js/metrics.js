@@ -47,8 +47,18 @@ export function mondayOf(iso) {
 }
 
 // ---------- Charge d'une séance ----------
+// Charge d'un jour de repos actif depuis les pas (NEAT) :
+// 1000 pas ≈ 10 min de marche à ~3 METs ≈ 30-40 % FC de réserve
+// → TRIMP Banister ≈ 1,5 pt / 1000 pas. On ne compte que l'excédent
+// au-delà de 3000 pas (activité de base quotidienne incompressible).
+export function stepsLoad(steps) {
+  if (!steps || steps <= 3000) return 0;
+  return Math.round((steps - 3000) / 1000 * 1.5);
+}
+
 // TRIMP-like : durée × facteur d'intensité². Si FC dispo → Banister, sinon RPE (Foster).
 export function workoutLoad(wo, profile) {
+  if (wo.sport === 'rest') return stepsLoad(wo.steps);
   const dur = wo.durationMin || 0;
   if (wo.avgHr && profile.hrMax && profile.hrRest && profile.hrMax > profile.hrRest) {
     const hrr = Math.min(1, Math.max(0, (wo.avgHr - profile.hrRest) / (profile.hrMax - profile.hrRest)));
@@ -153,13 +163,14 @@ export function weeklyStats(workouts, profile, nWeeks = 12) {
   const weeks = new Map();
   const thisMonday = mondayOf(todayIso());
   for (let i = 0; i < nWeeks; i++) {
-    weeks.set(addDays(thisMonday, -7 * i), { load: 0, durationMin: 0, distanceKm: 0, elevGain: 0, count: 0, z12Min: 0, z45Min: 0 });
+    weeks.set(addDays(thisMonday, -7 * i), { load: 0, durationMin: 0, distanceKm: 0, elevGain: 0, count: 0, restCount: 0, z12Min: 0, z45Min: 0 });
   }
   for (const wo of workouts) {
     const wk = mondayOf(wo.date);
     const agg = weeks.get(wk);
     if (!agg) continue;
     agg.load += workoutLoad(wo, profile);
+    if (wo.sport === 'rest') { agg.restCount++; continue; }
     agg.durationMin += wo.durationMin || 0;
     agg.distanceKm += wo.distanceKm || 0;
     agg.elevGain += wo.elevGain || 0;

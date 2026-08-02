@@ -8,6 +8,7 @@ export const SPORT = {
   run: { label: 'Course', ico: '🏃', cls: 'run' },
   trail: { label: 'Trail', ico: '⛰️', cls: 'trail' },
   bike: { label: 'Vélo', ico: '🚴', cls: 'bike' },
+  rest: { label: 'Repos', ico: '😴', cls: 'rest' },
 };
 
 export function toast(msg, ms = 2600) {
@@ -113,6 +114,15 @@ export const INFO = {
     title: 'Zones d\'entraînement personnalisées',
     body: `<p>Calculées depuis <b>votre</b> FCmax, VMA et FTP (onglet Profil). Chaque zone cible une adaptation physiologique différente : ne pas les mélanger, c'est tout l'art de l'entraînement.</p>
     <p class="mt8">L'essentiel : <b>Z1-Z2</b> = le socle (80 % du temps), <b>Z4</b> = le seuil (tempo contrôlé), <b>Z5</b> = la VMA/PMA (fractions courtes). La Z3 est utile en trail/vélo mais piégeuse en course sur route (zone grise).</p>`,
+  },
+  rest: {
+    title: 'Jours de repos & activité NEAT',
+    body: `<p>Le repos n'est pas l'absence d'entraînement : c'est <b>le moment où les adaptations se construisent</b> (resynthèse du glycogène, réparation musculaire, consolidation hormonale). Les enregistrer rend vos indicateurs plus justes :</p>
+    <p class="mt8">• la <b>monotonie de Foster</b> se calcule sur les 7 charges quotidiennes, jours à zéro inclus — un vrai jour de repos la fait baisser, ce qui réduit le risque de surmenage à charge égale ;<br>
+    • le <b>TSB remonte</b> pendant le repos : c'est mécanique et voulu ;<br>
+    • le conseil « X jours sans repos complet » devient fiable.</p>
+    <p class="mt8">🚶 <b>Et les pas ?</b> L'activité hors sport (NEAT — Non-Exercise Activity Thermogenesis) n'est pas neutre : une journée à 15 000 pas n'est pas une journée de récupération complète. L'app convertit vos pas en petite charge : <b>≈ 1,5 point TRIMP par 1000 pas au-delà de 3000</b> (base : marche ≈ 3 METs, soit 30-40 % de FC de réserve — modèle de Banister). Ex : 12 000 pas ≈ 13 pts, l'équivalent d'un footing de 15 min très facile.</p>
+    <p class="mt8">💡 Recommandation classique : <b>1 jour de repos complet par semaine minimum</b> (2 pour débutants et masters 50+), et une semaine allégée toutes les 3-4 semaines.</p>`,
   },
   hrmax: {
     title: 'FC max — comment l\'estimer juste',

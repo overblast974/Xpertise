@@ -3,7 +3,7 @@ import { db } from '../db.js';
 import { fmt, workoutLoad, todayIso } from '../metrics.js';
 import { parseActivityFile } from '../parser.js';
 import { sparkline } from '../charts.js';
-import { esc, SPORT, modal, toast, confirmDlg, bindSeg } from '../ui.js';
+import { esc, SPORT, modal, toast, confirmDlg, bindSeg, infoBtn } from '../ui.js';
 
 export function renderWorkouts(root) {
   const { workouts, profile } = db.get();
@@ -12,6 +12,7 @@ export function renderWorkouts(root) {
     <div class="row spread">
       <div class="section-title" style="margin-top:4px">Mes séances</div>
       <div class="row">
+        <button class="btn sm ghost" id="btn-rest">😴 Repos</button>
         <button class="btn sm ghost" id="btn-import">⌚ Import Garmin</button>
         <button class="btn sm" id="btn-add">＋ Ajouter</button>
       </div>
@@ -40,6 +41,17 @@ export function renderWorkouts(root) {
         : '';
       lastMonth = month;
       const sp = SPORT[w.sport] || SPORT.run;
+      if (w.sport === 'rest') {
+        return `${header}
+      <div class="wo-item rest-item" data-id="${w.id}">
+        <div class="wo-ico rest">😴</div>
+        <div class="wo-main">
+          <div class="wo-title">Jour de repos${w.steps ? ' actif' : ''}</div>
+          <div class="wo-meta">${fmt.date(w.date)}${w.notes ? ' · ' + esc(w.notes) : ''}</div>
+        </div>
+        <div class="wo-right">${w.steps ? `<b>${w.steps.toLocaleString('fr-FR')} pas</b>charge +${workoutLoad(w, profile)}` : '<b>—</b>récup totale'}</div>
+      </div>`;
+      }
       return `${header}
       <div class="wo-item" data-id="${w.id}">
         <div class="wo-ico ${sp.cls}">${sp.ico}</div>
@@ -54,13 +66,17 @@ export function renderWorkouts(root) {
       </div>`;
     }).join('');
     list.querySelectorAll('.wo-item').forEach(el =>
-      el.addEventListener('click', () => openWorkoutDetail(el.dataset.id)));
+      el.addEventListener('click', () => {
+        const w = db.get().workouts.find(x => x.id === el.dataset.id);
+        if (w?.sport === 'rest') openRestForm(w); else openWorkoutDetail(el.dataset.id);
+      }));
   };
   renderList();
   bindSeg(root.querySelector('#filter-seg'), v => renderList(v));
 
   root.querySelector('#btn-add').onclick = () => openWorkoutForm();
   root.querySelector('#btn-import').onclick = () => openImport();
+  root.querySelector('#btn-rest').onclick = () => openRestForm();
 }
 
 function paceOrSpeed(w) {
@@ -122,6 +138,52 @@ export function openWorkoutForm(existing = null) {
     else { db.addWorkout(wo); toast('Séance ajoutée ✔'); }
     m.close();
     window.dispatchEvent(new Event('xp:refresh'));
+  });
+}
+
+// ---------- Jour de repos ----------
+export function openRestForm(existing = null) {
+  const w = existing || { date: todayIso() };
+  const m = modal(`
+    <h2>😴 Jour de repos ${infoBtn('rest')}</h2>
+    <p class="muted small">Enregistrer vos jours de repos rend la monotonie, le TSB et les conseils plus justes. Ajoutez vos pas (montre/téléphone) pour que l'activité du quotidien (NEAT) soit comptée : ≈ 1,5 pt de charge / 1000 pas au-delà de 3000.</p>
+    <form class="form mt12" id="rest-form">
+      <div class="f-row">
+        <label class="f">Date<input type="date" name="date" required value="${w.date}" max="${todayIso()}"></label>
+        <label class="f">Pas dans la journée (optionnel)<input type="number" name="steps" min="0" max="60000" step="100" value="${w.steps ?? ''}" placeholder="ex : 8000"></label>
+      </div>
+      <label class="f">Note (sommeil, sensations…)<input name="notes" value="${esc(w.notes || '')}" placeholder="optionnel"></label>
+      <div class="row" style="justify-content:flex-end">
+        ${existing ? '<button class="btn danger sm" type="button" id="rest-del">Supprimer</button>' : ''}
+        <button class="btn" type="submit">${existing ? 'Enregistrer' : 'Ajouter le repos'}</button>
+      </div>
+    </form>
+  `);
+  m.el.querySelector('#rest-form').addEventListener('submit', e => {
+    e.preventDefault();
+    const fd = new FormData(e.target);
+    const date = fd.get('date');
+    const dup = db.get().workouts.find(x => x.sport === 'rest' && x.date === date && x.id !== existing?.id);
+    if (dup) { toast('Un jour de repos existe déjà à cette date.'); return; }
+    const entry = {
+      sport: 'rest',
+      date,
+      durationMin: 0,
+      steps: fd.get('steps') ? +fd.get('steps') : null,
+      notes: fd.get('notes')?.trim() || null,
+      source: 'manual',
+    };
+    if (existing) { db.updateWorkout(existing.id, entry); toast('Repos modifié ✔'); }
+    else { db.addWorkout(entry); toast('Jour de repos enregistré ✔'); }
+    m.close();
+    window.dispatchEvent(new Event('xp:refresh'));
+  });
+  m.el.querySelector('#rest-del')?.addEventListener('click', async () => {
+    if (await confirmDlg('Supprimer ce jour de repos ?', 'Supprimer')) {
+      db.deleteWorkout(existing.id);
+      m.close();
+      window.dispatchEvent(new Event('xp:refresh'));
+    }
   });
 }
 

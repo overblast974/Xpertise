@@ -89,7 +89,7 @@ export function renderDashboard(root, navigate) {
       <div class="card"><div class="stat">
         <span class="l">Cette semaine${infoBtn('weekload')}</span>
         <span class="v">${fmt.dur(thisWeek?.durationMin || 0)}</span>
-        <span class="d flat">${thisWeek?.count || 0} séance${(thisWeek?.count || 0) > 1 ? 's' : ''} · ${Math.round(thisWeek?.distanceKm || 0)} km · ${Math.round(thisWeek?.elevGain || 0)} m D+</span>
+        <span class="d flat">${thisWeek?.count || 0} séance${(thisWeek?.count || 0) > 1 ? 's' : ''} · ${Math.round(thisWeek?.distanceKm || 0)} km · ${Math.round(thisWeek?.elevGain || 0)} m D+${thisWeek?.restCount ? ` · 😴 ${thisWeek.restCount}` : ''}</span>
       </div></div>
     </div>
 
@@ -181,11 +181,13 @@ function goalLabel(goal) {
 
 function volumeComment(thisW, lastW) {
   if (!lastW?.durationMin) return 'Continuez à enregistrer vos séances pour suivre la progression.';
-  const pct = Math.round((thisW.durationMin - lastW.durationMin) / lastW.durationMin * 100);
   if (thisW.durationMin === 0) return 'Aucune séance cette semaine pour l\'instant.';
-  if (pct > 25) return `⚠️ Volume en hausse de ${pct}% vs semaine passée — au-delà de la rampe sûre de +10 %, surveillez les signaux de fatigue.`;
+  const pct = Math.round((thisW.durationMin - lastW.durationMin) / lastW.durationMin * 100);
+  const weekDone = (new Date().getDay() || 7) >= 6; // on ne compare équitablement qu'en fin de semaine
+  if (pct > 25) return `⚠️ Volume déjà en hausse de ${pct}% vs semaine passée — au-delà de la rampe sûre de +10 %, surveillez les signaux de fatigue.`;
   if (pct > 0) return `Volume en hausse de ${pct}% vs semaine passée — progression maîtrisée.`;
-  return `Volume en baisse de ${Math.abs(pct)}% vs semaine passée.`;
+  if (!weekDone) return `Semaine en cours : ${Math.round(thisW.durationMin / 60 * 10) / 10} h pour l'instant (semaine passée : ${Math.round(lastW.durationMin / 60 * 10) / 10} h).`;
+  return `Volume en baisse de ${Math.abs(pct)}% vs semaine passée${pct < -35 ? ' — parfait si c\'est une décharge assumée, à surveiller sinon' : ''}.`;
 }
 
 function addDaysIso(iso, n) {

@@ -33,7 +33,8 @@ export function coachContext(state) {
   let daysSinceLongRun = 999;
   let daysSinceRest = 0;
   let daysSinceRace = 999, lastRaceDurationH = 0;
-  const workoutDays = new Set(workouts.map(w => w.date));
+  // un jour de repos enregistré (sport 'rest') compte comme repos, pas comme entraînement
+  const workoutDays = new Set(workouts.filter(w => w.sport !== 'rest').map(w => w.date));
   for (let i = 0; i < 30; i++) {
     const d = new Date(today + 'T12:00:00'); d.setDate(d.getDate() - i);
     if (!workoutDays.has(d.toISOString().slice(0, 10))) { daysSinceRest = i; break; }
@@ -120,7 +121,7 @@ export function nutritionAdvice(params, max = 5) {
     intensity: params.intensity,
     temperature_c: params.tempC,
     sport: params.sport === 'run' ? 'running' : params.sport === 'bike' ? 'cycling' : 'trail',
-    sodium_intake_planned: params.durationH >= 2,
+    sodium_intake_planned: false, // rappel sodium systématique dès 2 h d'effort
     drinking_plain_water_only: false,
     target_carbs_g_per_h: params.targetCarbs || 0,
     gut_training_done: params.gutTrained ?? false,
