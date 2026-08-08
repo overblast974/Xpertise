@@ -72,7 +72,10 @@ export function renderDashboard(root, navigate) {
       <div class="hello">${greeting()}${profile.name ? ' ' + esc(profile.name) : ''} · ${new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}</div>
       <div class="hero-line">Forme : <b>${tsb.label}</b> <span class="badge ${tsb.cls}" style="vertical-align:middle">TSB ${fit.tsb > 0 ? '+' : ''}${fit.tsb}</span>${infoBtn('tsb')}</div>
       <div class="hero-note">${esc(tsb.text)}</div>
-      ${daysToRace != null && daysToRace >= 0 ? `<div class="row mt12"><span class="badge accent">🏁 Objectif dans ${daysToRace} j — ${esc(goalLabel(goal))}</span></div>` : ''}
+      <div class="row mt12">
+        ${daysToRace != null && daysToRace >= 0 ? `<span class="badge accent">🏁 Objectif dans ${daysToRace} j — ${esc(goalLabel(goal))}</span>` : ''}
+        <a href="./dashboard-v2.html" class="badge" style="text-decoration:none">✨ Nouveau look (bêta)</a>
+      </div>
     </div>
 
     <div class="cards-3 mt12">
