@@ -5,6 +5,7 @@ import { fitnessChart, weeklyBars, tsbGauge, donut } from '../charts.js';
 import { coachAdvice, tsbLabel } from '../advice.js';
 import { esc, SPORT, infoBtn } from '../ui.js';
 import { openWorkoutForm } from './workouts.js';
+import { mountHub } from './hub.js';
 
 export function renderDashboard(root, navigate) {
   const state = db.get();
@@ -68,15 +69,22 @@ export function renderDashboard(root, navigate) {
   const daysToRace = goal?.date ? daysBetween(today, goal.date) : null;
 
   root.innerHTML = `
-    <div class="hero">
-      <div class="hello">${greeting()}${profile.name ? ' ' + esc(profile.name) : ''} · ${new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}</div>
-      <div class="hero-line">Forme : <b>${tsb.label}</b> <span class="badge ${tsb.cls}" style="vertical-align:middle">TSB ${fit.tsb > 0 ? '+' : ''}${fit.tsb}</span>${infoBtn('tsb')}</div>
-      <div class="hero-note">${esc(tsb.text)}</div>
-      <div class="row mt12">
-        ${daysToRace != null && daysToRace >= 0 ? `<span class="badge accent">🏁 Objectif dans ${daysToRace} j — ${esc(goalLabel(goal))}</span>` : ''}
-        <a href="./dashboard-v2.html" class="badge" style="text-decoration:none">✨ Nouveau look (bêta)</a>
-      </div>
+    <div class="row spread" style="padding:0 2px">
+      <span class="muted" style="font-weight:700">${greeting()}${profile.name ? ' ' + esc(profile.name) : ''} · ${new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}</span>
+      ${daysToRace != null && daysToRace >= 0 ? `<span class="badge accent">🏁 J−${daysToRace}</span>` : ''}
     </div>
+
+    <h1 class="v2-title mt12">
+      <span class="w-run">COURSE</span> <span class="w-plus">+</span>
+      <span class="w-trail">TRAIL</span> <span class="w-plus">+</span>
+      <span class="w-bike">VÉLO</span>
+    </h1>
+    <div class="v2-hint">👆 Touchez une carte pour explorer · le centre pour revenir ${infoBtn('tsb')}</div>
+
+    <div class="hub" id="dash-hub"></div>
+    <div class="hub-detail" id="dash-hub-detail"></div>
+
+    ${daysToRace != null && daysToRace >= 0 ? `<p class="muted small" style="text-align:center;margin-top:10px">🏁 Objectif dans <b style="color:var(--txt)">${daysToRace} jours</b> — ${esc(goalLabel(goal))}</p>` : ''}
 
     <div class="cards-3 mt12">
       <div class="card"><div class="stat">
@@ -170,6 +178,7 @@ export function renderDashboard(root, navigate) {
   `;
 
   root.querySelector('#cta-goal')?.addEventListener('click', () => navigate('plan'));
+  mountHub(root.querySelector('#dash-hub'), root.querySelector('#dash-hub-detail'), navigate);
 }
 
 function greeting() {
